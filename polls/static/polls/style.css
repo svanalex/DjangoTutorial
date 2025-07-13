@@ -4,5 +4,7 @@ li a {
 
 body {
     background: white url("images/background.jpg") no-repeat;
-    background-size: cover;
+    /* background-size: cover; */
+    background-color: #f0f0f0;
+    font-family: Arial, sans-serif;
 }
