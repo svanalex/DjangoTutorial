@@ -9,10 +9,12 @@ from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login
+from django.contrib.auth import logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.forms import AuthenticationForm
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
+
 
 # Create your views here.
 class IndexView(generic.ListView):
@@ -87,7 +89,16 @@ class LoginView(generic.View):
     def post(self, request):
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
-            user = form.save()
+            user = form.get_user()
             login(request, user)
             return HttpResponseRedirect(reverse('polls:index'))
         return render(request, 'login/login.html', {'form': form})
+    
+class LogoutView(generic.View):
+    def get(self, request):
+        logout(request)
+        return HttpResponseRedirect(reverse('polls:index'))
+    
+    def post(self, request):
+        logout(request)
+        return HttpResponseRedirect(reverse('polls:index'))

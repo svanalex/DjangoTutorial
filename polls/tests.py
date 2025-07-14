@@ -1,8 +1,9 @@
 import datetime
-from django.test import TestCase
+from django.test import TestCase, Client
 from django.utils import timezone
 from django.urls import reverse
-from .models import Question
+from .models import Question, Choice 
+from django.contrib.auth.models import User
 
 # Create your tests here.
 class QuestionModelTests(TestCase):
@@ -105,3 +106,67 @@ class QuestionResultsViewTests(TestCase):
         url = reverse("polls:results", args=(past_question.id,))
         reponse = self.client.get(url)
         self.assertEqual(reponse.status_code, 200)
+
+class VoteAuthTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(username="testuser", password="password")
+        self.question = Question.objects.create(
+            question_text="What's up?",
+            pub_date=timezone.now()
+        )
+        self.choice = Choice.objects.create(
+            question=self.question,
+            choice_text="Not much",
+            votes=0
+        )
+
+    def test_redirect_vote_if_not_logged_in(self):
+        vote_url = reverse("polls:vote", args=(self.question.id,))
+        response = self.client.post(vote_url, {"choice": self.choice.id})
+        self.assertRedirects(response, f"/polls/login/?next={vote_url}")
+
+    def test_authenticated_user_can_vote(self):
+        self.client.login(username="testuser", password="password")
+        vote_url = reverse("polls:vote", args=(self.question.id,))
+        response = self.client.post(vote_url, {"choice": self.choice.id})
+        self.assertRedirects(response, reverse("polls:results", args=(self.question.id,)))
+        self.choice.refresh_from_db()
+        self.assertEqual(self.choice.votes, 1)
+
+    def test_vote_without_selecting_choice(self):
+        self.client.login(username="testuser", password="password")
+        vote_url = reverse("polls:vote", args=(self.question.id,))
+        response = self.client.post(vote_url, {})  # No 'choice'
+        self.assertContains(response, "You didn")
+
+
+    def test_auth_user_can_log_out(self):
+        self.client.login(username="testuser", password="password")
+        logout_url = reverse("polls:logout")
+        response = self.client.get(logout_url)
+        self.assertRedirects(response, reverse("polls:index"))
+        self.assertFalse(response.wsgi_request.user.is_authenticated)
+
+class LoginTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(username="testuser", password="password")
+
+    def test_login_success(self):
+        response = self.client.post(reverse("polls:login"), {
+            "username": "testuser",
+            "password": "password"
+        })
+        self.assertEqual(response.status_code, 302)  # Redirect after login
+        self.assertTrue(response.url.startswith("/"))  # Usually index or `next`
+
+    def test_login_failure(self):
+        response = self.client.post(reverse("polls:login"), {
+            "username": "testuser",
+            "password": "wrongpassword"
+        })
+        self.assertContains(response, "Please enter a correct username and password")
+
+
+    
