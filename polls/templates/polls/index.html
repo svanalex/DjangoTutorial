@@ -15,6 +15,17 @@
 {% endif %}
 
 {% if user.is_authenticated %}
+    <h2>Create a new poll</h2>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <li><a href="{% url 'polls:create_poll'%}">Create a poll here</a></li>
+    </form>
+{% else %}
+    <p>You need to be logged in to create a poll.</p>
+{% endif %}
+
+{% if user.is_authenticated %}
     <p>Welcome, {{ user.username }}!</p>
     <p><a href="{% url 'polls:logout' %}">Logout</a></p>
 {% else %}
